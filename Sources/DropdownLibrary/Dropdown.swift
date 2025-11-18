@@ -4,15 +4,23 @@
 //
 //  Created by enjay on 18/11/25.
 //
-
-
 import UIKit
 
 public class Dropdown: UIView, UITableViewDelegate, UITableViewDataSource {
 
-    private var items: [String] = []
-    private var onSelect: ((String) -> Void)?
+    // MARK: - Public Properties
+    public var anchorView: UIView?
+    public var dataSource: [String] = []
+    public var selectionAction: ((Int, String) -> Void)?
+
+    // MARK: - Private Properties
     private let tableView = UITableView()
+
+    // MARK: - Initializers
+    public init() {
+        super.init(frame: .zero)
+        setupUI()
+    }
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
@@ -20,9 +28,11 @@ public class Dropdown: UIView, UITableViewDelegate, UITableViewDataSource {
     }
 
     required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
+        super.init(coder: coder)
+        setupUI()
     }
 
+    // MARK: - UI Setup
     private func setupUI() {
         tableView.delegate = self
         tableView.dataSource = self
@@ -31,8 +41,10 @@ public class Dropdown: UIView, UITableViewDelegate, UITableViewDataSource {
             nibName: "DropdownCell",
             bundle: Bundle.module
         )
-
         tableView.register(nib, forCellReuseIdentifier: "DropdownCell")
+
+        tableView.layer.cornerRadius = 8
+        tableView.clipsToBounds = true
 
         tableView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(tableView)
@@ -45,15 +57,34 @@ public class Dropdown: UIView, UITableViewDelegate, UITableViewDataSource {
         ])
     }
 
-    public func setItems(_ data: [String], onSelect: @escaping (String) -> Void) {
-        self.items = data
-        self.onSelect = onSelect
-        tableView.reloadData()
+    // MARK: - Public Methods
+    public func show() {
+        guard let anchor = anchorView, let parent = anchor.superview else {
+            print("Dropdown Error: anchorView not set or has no superview")
+            return
+        }
+
+        // Calculate dropdown frame
+        let height = min(CGFloat(dataSource.count) * 44, 200)
+
+        self.frame = CGRect(
+            x: anchor.frame.minX,
+            y: anchor.frame.maxY + 4,
+            width: anchor.frame.width,
+            height: height
+        )
+
+        parent.addSubview(self)
+        self.tableView.reloadData()
     }
 
-    // MARK: TableView
+    public func hide() {
+        self.removeFromSuperview()
+    }
+
+    // MARK: - TableView Methods
     public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return items.count
+        return dataSource.count
     }
 
     public func tableView(
@@ -61,28 +92,19 @@ public class Dropdown: UIView, UITableViewDelegate, UITableViewDataSource {
         cellForRowAt indexPath: IndexPath
     ) -> UITableViewCell {
 
-        let cell = tableView.dequeueReusableCell(withIdentifier: "DropdownCell", for: indexPath) as! DropdownCell
-        cell.titleLabel.text = items[indexPath.row]
+        let cell = tableView
+            .dequeueReusableCell(withIdentifier: "DropdownCell", for: indexPath) as! DropdownCell
+
+        cell.titleLabel.text = dataSource[indexPath.row]
         return cell
     }
 
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        onSelect?(items[indexPath.row])
+        selectionAction?(indexPath.row, dataSource[indexPath.row])
+        hide()
     }
 }
 
 
-//import UIKit
-//
-//class Dropdown: UIViewController {
-//
-//    override func viewDidLoad() {
-//        super.viewDidLoad()
-//
-//        // Do any additional setup after loading the view.
-//    }
-//
-//
-//
-//
-//}
+
+
